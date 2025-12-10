@@ -1,4 +1,4 @@
-# 📘 **Cost Database – README**
+# 📘 **Cost Database**
 
 A simple and user-friendly **Cost Database Application** built with **Python**, **Tkinter**, and **OpenPyXL**.
 This tool allows you to record, edit, delete, and search cost-related items such as materials, labor, and other expenses.
