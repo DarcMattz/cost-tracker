@@ -1,0 +1,53 @@
+# ==== Python ====
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Distribution / packaging
+build/
+dist/
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Jupyter Notebook checkpoints (if ever used)
+.ipynb_checkpoints
+
+# ==== OS / Editor files ====
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+
+# ==== Application files ====
+
+# Excel database created by the app
+cost_data.xlsx
+
+# Any backup or temp files
+*.tmp
+*.bak
+~$*
+
+# ==== Logs ====
+*.log
+
