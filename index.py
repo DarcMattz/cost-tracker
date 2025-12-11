@@ -10,8 +10,8 @@ EXCEL_FILE = "cost_data.xlsx"
 
 # Ensure Excel file exists with new column structure
 HEADERS = [
-    "Item Description","Category","Unit","Material","Total",
-    "Brand","Date","Logged By","Reference","Remarks"
+    "Item Description","Category","Unit","Material Bare Cost",
+    "Brand","Date","Logged by","Reference","Remarks"
 ]
 
 if not os.path.exists(EXCEL_FILE):
@@ -56,11 +56,11 @@ def save_item():
 
     try:
         material_cost = float(material_entry.get() or 0)
+        # Format as 10,000.00
+        material_cost_formatted = "{:,.2f}".format(material_cost)
     except ValueError:
-        messagebox.showerror("Error", "Material cost must be numeric.")
+        messagebox.showerror("Error", "Material Bare Cost must be numeric.")
         return
-
-    total = material_cost  # Only material now
 
     item_date = date_entry.get().strip() or str(date.today())
     logged_by = logged_entry.get().strip()
@@ -72,7 +72,7 @@ def save_item():
         return
 
     new_row = (
-        item_desc, category, unit, material_cost, total,
+        item_desc, category, unit, material_cost_formatted,
         brand, item_date, logged_by, reference_path, remarks
     )
 
@@ -260,7 +260,7 @@ columns = HEADERS
 tree = ttk.Treeview(table_frame, columns=columns, show="headings")
 for col in columns:
     tree.heading(col, text=col)
-    tree.column(col, width=150)
+    tree.column(col, width=150 if col in ["Item Description","Remarks","Brand"] else 120)
 
 tree.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
 
@@ -292,7 +292,7 @@ tk.Label(form_frame, text="Unit").grid(row=1, column=0)
 unit_entry = tk.Entry(form_frame)
 unit_entry.grid(row=1, column=1)
 
-tk.Label(form_frame, text="Material").grid(row=1, column=2)
+tk.Label(form_frame, text="Material Bare Cost").grid(row=1, column=2)
 material_entry = tk.Entry(form_frame)
 material_entry.grid(row=1, column=3)
 
@@ -305,7 +305,7 @@ date_entry = tk.Entry(form_frame)
 date_entry.grid(row=2, column=3)
 date_entry.insert(0, str(date.today()))
 
-tk.Label(form_frame, text="Logged By").grid(row=3, column=0)
+tk.Label(form_frame, text="Logged by").grid(row=3, column=0)
 logged_entry = tk.Entry(form_frame)
 logged_entry.grid(row=3, column=1)
 
@@ -328,10 +328,9 @@ tk.Button(btn_frame, text="Edit Selected", bg="#2196F3", fg="white", width=12, c
 tk.Button(btn_frame, text="Delete Selected", bg="#f44336", fg="white", width=12, command=delete_item).pack(side=tk.LEFT, padx=5)
 
 # Watermark
-watermark = tk.Label(root, text="Jibee", font=("Arial", 10, "italic"),
+watermark = tk.Label(root, text="Jibee | VCC", font=("Arial", 10, "italic"),
                      bg="#f0f2f5", fg="#999999")
 watermark.place(relx=1.0, rely=1.0, anchor="se", x=-10, y=-10)
-
 
 # Load & render
 data = load_data()
