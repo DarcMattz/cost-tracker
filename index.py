@@ -7,10 +7,11 @@ from datetime import date
 
 EXCEL_FILE = "cost_data.xlsx"
 
-# Correct Column Structure (9 columns)
+# Updated Column Structure (11 columns)
 HEADERS = [
-    "Item Description","Category","Unit","Material Bare Cost",
-    "Brand","Date","Logged by","Reference","Remarks"
+    "Item Description","Category","Unit","Bare Price",
+    "Brand","Supplier","Location","Date",
+    "Logged by","Reference","Remarks"
 ]
 
 # Create Excel file if missing
@@ -46,15 +47,18 @@ def save_item():
     item_desc = item_entry.get().strip()
     category = category_entry.get().strip()
     unit = unit_entry.get().strip()
-    brand = brand_entry.get().strip()
 
     try:
         raw_cost = material_entry.get().replace(",", "")
-        material_cost = float(raw_cost or 0)
-        material_cost_formatted = "{:,.2f}".format(material_cost)
+        bare_price = float(raw_cost or 0)
+        bare_price_formatted = "{:,.2f}".format(bare_price)
     except ValueError:
-        messagebox.showerror("Error", "Material Bare Cost must be numeric.")
+        messagebox.showerror("Error", "Bare Price must be numeric.")
         return
+
+    brand = brand_entry.get().strip()
+    supplier = supplier_entry.get().strip()
+    location = location_entry.get().strip()
 
     item_date = date_entry.get().strip() or str(date.today())
     logged_by = logged_entry.get().strip()
@@ -66,8 +70,9 @@ def save_item():
         return
 
     new_row = (
-        item_desc, category, unit, material_cost_formatted,
-        brand, item_date, logged_by, reference_path, remarks
+        item_desc, category, unit, bare_price_formatted,
+        brand, supplier, location, item_date,
+        logged_by, reference_path, remarks
     )
 
     if edit_index is not None:
@@ -123,16 +128,22 @@ def edit_item():
     brand_entry.delete(0, tk.END)
     brand_entry.insert(0, row[4])
 
+    supplier_entry.delete(0, tk.END)
+    supplier_entry.insert(0, row[5])
+
+    location_entry.delete(0, tk.END)
+    location_entry.insert(0, row[6])
+
     date_entry.delete(0, tk.END)
-    date_entry.insert(0, row[5])
+    date_entry.insert(0, row[7])
 
     logged_entry.delete(0, tk.END)
-    logged_entry.insert(0, row[6])
+    logged_entry.insert(0, row[8])
 
-    reference_var.set(row[7] or "")
+    reference_var.set(row[9] or "")
 
     notes_entry.delete(0, tk.END)
-    notes_entry.insert(0, row[8])
+    notes_entry.insert(0, row[10])
 
 # Clear Form
 def clear_form():
@@ -144,6 +155,8 @@ def clear_form():
     unit_entry.delete(0, tk.END)
     material_entry.delete(0, tk.END)
     brand_entry.delete(0, tk.END)
+    supplier_entry.delete(0, tk.END)
+    location_entry.delete(0, tk.END)
 
     date_entry.delete(0, tk.END)
     date_entry.insert(0, str(date.today()))
@@ -165,7 +178,7 @@ def open_reference():
         return
 
     idx = int(selected[0])
-    ref = data[idx][7]
+    ref = data[idx][9]
 
     if not ref:
         messagebox.showinfo("No Reference", "No reference assigned.")
@@ -181,7 +194,7 @@ def open_reference():
 def copy_reference():
     selected = tree.selection()
     if selected:
-        pyperclip.copy(data[int(selected[0])][7] or "")
+        pyperclip.copy(data[int(selected[0])][9] or "")
 
 # Paste Reference
 def paste_reference():
@@ -194,7 +207,7 @@ def paste_reference():
     paste_val = pyperclip.paste()
 
     row = list(data[idx])
-    row[7] = paste_val
+    row[9] = paste_val
     data[idx] = tuple(row)
 
     save_data(data)
@@ -215,7 +228,7 @@ def render_table():
         tree.delete(i)
 
     for idx, row in enumerate(data):
-        if query in str(row[0]).lower() or query in str(row[1]).lower():
+        if query in str(row).lower():
             tree.insert("", "end", iid=idx, values=row)
 
 # ================= GUI SETUP =================
@@ -227,7 +240,7 @@ root.configure(bg="#f0f2f5")
 try:
     root.state("zoomed")
 except:
-    root.geometry("1300x750")
+    root.geometry("1400x800")
 
 # Search Bar
 search_frame = tk.Frame(root, bg="#f0f2f5")
@@ -248,7 +261,7 @@ tree = ttk.Treeview(table_frame, columns=columns, show="headings")
 
 for col in columns:
     tree.heading(col, text=col)
-    tree.column(col, width=150 if col in ["Item Description", "Remarks", "Brand"] else 120)
+    tree.column(col, width=150 if col in ["Item Description", "Remarks", "Brand", "Supplier"] else 120)
 
 tree.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
 
@@ -281,7 +294,7 @@ tk.Label(form_frame, text="Unit").grid(row=1, column=0)
 unit_entry = tk.Entry(form_frame)
 unit_entry.grid(row=1, column=1)
 
-tk.Label(form_frame, text="Material Bare Cost").grid(row=1, column=2)
+tk.Label(form_frame, text="Bare Price").grid(row=1, column=2)
 material_entry = tk.Entry(form_frame)
 material_entry.grid(row=1, column=3)
 
@@ -289,27 +302,35 @@ tk.Label(form_frame, text="Brand").grid(row=2, column=0)
 brand_entry = tk.Entry(form_frame)
 brand_entry.grid(row=2, column=1)
 
-tk.Label(form_frame, text="Date").grid(row=2, column=2)
+tk.Label(form_frame, text="Supplier").grid(row=2, column=2)
+supplier_entry = tk.Entry(form_frame)
+supplier_entry.grid(row=2, column=3)
+
+tk.Label(form_frame, text="Location").grid(row=3, column=0)
+location_entry = tk.Entry(form_frame)
+location_entry.grid(row=3, column=1)
+
+tk.Label(form_frame, text="Date").grid(row=3, column=2)
 date_entry = tk.Entry(form_frame)
-date_entry.grid(row=2, column=3)
+date_entry.grid(row=3, column=3)
 date_entry.insert(0, str(date.today()))
 
-tk.Label(form_frame, text="Logged by").grid(row=3, column=0)
+tk.Label(form_frame, text="Logged by").grid(row=4, column=0)
 logged_entry = tk.Entry(form_frame)
-logged_entry.grid(row=3, column=1)
+logged_entry.grid(row=4, column=1)
 
-tk.Label(form_frame, text="Reference").grid(row=3, column=2)
+tk.Label(form_frame, text="Reference").grid(row=4, column=2)
 reference_var = tk.StringVar()
 reference_entry = tk.Entry(form_frame, textvariable=reference_var, width=30)
-reference_entry.grid(row=3, column=3)
-tk.Button(form_frame, text="Browse", command=browse_reference).grid(row=3, column=4, padx=5)
+reference_entry.grid(row=4, column=3)
+tk.Button(form_frame, text="Browse", command=browse_reference).grid(row=4, column=4, padx=5)
 
-tk.Label(form_frame, text="Remarks").grid(row=4, column=0)
+tk.Label(form_frame, text="Remarks").grid(row=5, column=0)
 notes_entry = tk.Entry(form_frame, width=40)
-notes_entry.grid(row=4, column=1, columnspan=3)
+notes_entry.grid(row=5, column=1, columnspan=3)
 
 btn_frame = tk.Frame(form_frame)
-btn_frame.grid(row=5, column=0, columnspan=4, pady=10)
+btn_frame.grid(row=6, column=0, columnspan=4, pady=10)
 
 tk.Button(btn_frame, text="Save", bg="#4CAF50", fg="white", width=12, command=save_item).pack(side=tk.LEFT, padx=5)
 tk.Button(btn_frame, text="Clear", bg="#f0ad4e", fg="white", width=12, command=clear_form).pack(side=tk.LEFT, padx=5)
