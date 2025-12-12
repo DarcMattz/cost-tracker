@@ -2,18 +2,18 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import openpyxl
 import os
-import subprocess
 import pyperclip
 from datetime import date
 
 EXCEL_FILE = "cost_data.xlsx"
 
-# Ensure Excel file exists with new column structure
+# Correct Column Structure (9 columns)
 HEADERS = [
     "Item Description","Category","Unit","Material Bare Cost",
     "Brand","Date","Logged by","Reference","Remarks"
 ]
 
+# Create Excel file if missing
 if not os.path.exists(EXCEL_FILE):
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -21,18 +21,13 @@ if not os.path.exists(EXCEL_FILE):
     ws.append(HEADERS)
     wb.save(EXCEL_FILE)
 
-
-# Load data
+# Load Excel Data
 def load_data():
     wb = openpyxl.load_workbook(EXCEL_FILE)
     ws = wb.active
-    data = []
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        data.append(row)
-    return data
+    return [row for row in ws.iter_rows(min_row=2, values_only=True)]
 
-
-# Save data
+# Save Excel Data
 def save_data(data):
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -44,8 +39,7 @@ def save_data(data):
 
     wb.save(EXCEL_FILE)
 
-
-# Add/Edit item
+# Add/Edit Item
 def save_item():
     global data, edit_index
 
@@ -55,8 +49,8 @@ def save_item():
     brand = brand_entry.get().strip()
 
     try:
-        material_cost = float(material_entry.get() or 0)
-        # Format as 10,000.00
+        raw_cost = material_entry.get().replace(",", "")
+        material_cost = float(raw_cost or 0)
         material_cost_formatted = "{:,.2f}".format(material_cost)
     except ValueError:
         messagebox.showerror("Error", "Material Bare Cost must be numeric.")
@@ -86,8 +80,7 @@ def save_item():
     render_table()
     clear_form()
 
-
-# Delete
+# Delete Item
 def delete_item():
     global data
     selected = tree.selection()
@@ -96,16 +89,17 @@ def delete_item():
         return
 
     idx = int(selected[0])
+
     if messagebox.askyesno("Confirm", "Delete this item?"):
         data.pop(idx)
         save_data(data)
         render_table()
 
-
-# Edit
+# Edit Item
 def edit_item():
     global edit_index
     selected = tree.selection()
+
     if not selected:
         messagebox.showwarning("Select", "Select an item to edit.")
         return
@@ -124,54 +118,54 @@ def edit_item():
     unit_entry.insert(0, row[2])
 
     material_entry.delete(0, tk.END)
-    material_entry.insert(0, row[3])
+    material_entry.insert(0, row[3].replace(",", ""))
 
     brand_entry.delete(0, tk.END)
-    brand_entry.insert(0, row[5])
+    brand_entry.insert(0, row[4])
 
     date_entry.delete(0, tk.END)
-    date_entry.insert(0, row[6])
+    date_entry.insert(0, row[5])
 
     logged_entry.delete(0, tk.END)
-    logged_entry.insert(0, row[7])
+    logged_entry.insert(0, row[6])
 
-    reference_var.set(row[8] or "")
+    reference_var.set(row[7] or "")
 
     notes_entry.delete(0, tk.END)
-    notes_entry.insert(0, row[9])
+    notes_entry.insert(0, row[8])
 
-
-# Clear
+# Clear Form
 def clear_form():
     global edit_index
+    edit_index = None
+
     item_entry.delete(0, tk.END)
     category_entry.delete(0, tk.END)
     unit_entry.delete(0, tk.END)
     material_entry.delete(0, tk.END)
     brand_entry.delete(0, tk.END)
+
     date_entry.delete(0, tk.END)
     date_entry.insert(0, str(date.today()))
+
     logged_entry.delete(0, tk.END)
     reference_var.set("")
     notes_entry.delete(0, tk.END)
-    edit_index = None
 
-
-# Browse reference file
+# Browse Reference
 def browse_reference():
-    filepath = filedialog.askopenfilename()
-    if filepath:
-        reference_var.set(filepath)
+    path = filedialog.askopenfilename()
+    if path:
+        reference_var.set(path)
 
-
-# Right-Click Menu Actions
+# Right-click: Open Reference
 def open_reference():
     selected = tree.selection()
     if not selected:
         return
 
     idx = int(selected[0])
-    ref = data[idx][8]
+    ref = data[idx][7]
 
     if not ref:
         messagebox.showinfo("No Reference", "No reference assigned.")
@@ -181,21 +175,15 @@ def open_reference():
         messagebox.showerror("Error", "Referenced file does not exist.")
         return
 
-    try:
-        os.startfile(ref)
-    except Exception as e:
-        messagebox.showerror("Error", str(e))
+    os.startfile(ref)
 
-
+# Copy Reference
 def copy_reference():
     selected = tree.selection()
-    if not selected:
-        return
-    idx = int(selected[0])
-    ref = data[idx][8] or ""
-    pyperclip.copy(ref)
+    if selected:
+        pyperclip.copy(data[int(selected[0])][7] or "")
 
-
+# Paste Reference
 def paste_reference():
     global data
     selected = tree.selection()
@@ -206,24 +194,23 @@ def paste_reference():
     paste_val = pyperclip.paste()
 
     row = list(data[idx])
-    row[8] = paste_val
+    row[7] = paste_val
     data[idx] = tuple(row)
 
     save_data(data)
     render_table()
 
-
-# Right-click popup
+# Right-click Menu
 def show_context_menu(event):
-    selected = tree.identify_row(event.y)
-    if selected:
-        tree.selection_set(selected)
+    row = tree.identify_row(event.y)
+    if row:
+        tree.selection_set(row)
         menu.post(event.x_root, event.y_root)
 
-
-# Render table
+# Render Table
 def render_table():
     query = search_var.get().lower()
+
     for i in tree.get_children():
         tree.delete(i)
 
@@ -231,8 +218,8 @@ def render_table():
         if query in str(row[0]).lower() or query in str(row[1]).lower():
             tree.insert("", "end", iid=idx, values=row)
 
+# ================= GUI SETUP =================
 
-# GUI Setup
 root = tk.Tk()
 root.title("Cost Database")
 root.configure(bg="#f0f2f5")
@@ -242,7 +229,7 @@ try:
 except:
     root.geometry("1300x750")
 
-# Search
+# Search Bar
 search_frame = tk.Frame(root, bg="#f0f2f5")
 search_frame.pack(fill=tk.X, padx=10, pady=5)
 
@@ -258,17 +245,19 @@ table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
 columns = HEADERS
 tree = ttk.Treeview(table_frame, columns=columns, show="headings")
+
 for col in columns:
     tree.heading(col, text=col)
-    tree.column(col, width=150 if col in ["Item Description","Remarks","Brand"] else 120)
+    tree.column(col, width=150 if col in ["Item Description", "Remarks", "Brand"] else 120)
 
 tree.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
 
+# Scrollbar
 scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
 tree.configure(yscroll=scrollbar.set)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-# Context menu
+# Right-click Menu
 menu = tk.Menu(root, tearoff=0)
 menu.add_command(label="Open Reference", command=open_reference)
 menu.add_command(label="Copy Reference", command=copy_reference)
@@ -276,7 +265,7 @@ menu.add_command(label="Paste Reference", command=paste_reference)
 
 tree.bind("<Button-3>", show_context_menu)
 
-# Form
+# Form Section
 form_frame = tk.LabelFrame(root, text="Add / Edit Item", padx=10, pady=10)
 form_frame.pack(fill=tk.X, padx=10, pady=10)
 
@@ -332,7 +321,7 @@ watermark = tk.Label(root, text="Jibee | VCC", font=("Arial", 10, "italic"),
                      bg="#f0f2f5", fg="#999999")
 watermark.place(relx=1.0, rely=1.0, anchor="se", x=-10, y=-10)
 
-# Load & render
+# Load & Start
 data = load_data()
 edit_index = None
 render_table()
