@@ -7,9 +7,9 @@ from datetime import date
 
 EXCEL_FILE = "cost_data.xlsx"
 
-# Updated Column Structure (11 columns)
+# Column Structure (12 columns)
 HEADERS = [
-    "Item Description","Category","Unit","Bare Price",
+    "Item Description","Category","Unit","Currency","Bare Price",
     "Brand","Supplier","Location","Date",
     "Logged by","Reference","Remarks"
 ]
@@ -47,6 +47,7 @@ def save_item():
     item_desc = item_entry.get().strip()
     category = category_entry.get().strip()
     unit = unit_entry.get().strip()
+    currency = currency_entry.get().strip()
 
     try:
         raw_cost = material_entry.get().replace(",", "")
@@ -59,7 +60,6 @@ def save_item():
     brand = brand_entry.get().strip()
     supplier = supplier_entry.get().strip()
     location = location_entry.get().strip()
-
     item_date = date_entry.get().strip() or str(date.today())
     logged_by = logged_entry.get().strip()
     reference_path = reference_var.get().strip()
@@ -70,7 +70,7 @@ def save_item():
         return
 
     new_row = (
-        item_desc, category, unit, bare_price_formatted,
+        item_desc, category, unit, currency, bare_price_formatted,
         brand, supplier, location, item_date,
         logged_by, reference_path, remarks
     )
@@ -94,7 +94,6 @@ def delete_item():
         return
 
     idx = int(selected[0])
-
     if messagebox.askyesno("Confirm", "Delete this item?"):
         data.pop(idx)
         save_data(data)
@@ -104,7 +103,6 @@ def delete_item():
 def edit_item():
     global edit_index
     selected = tree.selection()
-
     if not selected:
         messagebox.showwarning("Select", "Select an item to edit.")
         return
@@ -122,28 +120,31 @@ def edit_item():
     unit_entry.delete(0, tk.END)
     unit_entry.insert(0, row[2])
 
+    currency_entry.delete(0, tk.END)
+    currency_entry.insert(0, row[3])
+
     material_entry.delete(0, tk.END)
-    material_entry.insert(0, row[3].replace(",", ""))
+    material_entry.insert(0, row[4].replace(",", ""))
 
     brand_entry.delete(0, tk.END)
-    brand_entry.insert(0, row[4])
+    brand_entry.insert(0, row[5])
 
     supplier_entry.delete(0, tk.END)
-    supplier_entry.insert(0, row[5])
+    supplier_entry.insert(0, row[6])
 
     location_entry.delete(0, tk.END)
-    location_entry.insert(0, row[6])
+    location_entry.insert(0, row[7])
 
     date_entry.delete(0, tk.END)
-    date_entry.insert(0, row[7])
+    date_entry.insert(0, row[8])
 
     logged_entry.delete(0, tk.END)
-    logged_entry.insert(0, row[8])
+    logged_entry.insert(0, row[9])
 
-    reference_var.set(row[9] or "")
+    reference_var.set(row[10] or "")
 
     notes_entry.delete(0, tk.END)
-    notes_entry.insert(0, row[10])
+    notes_entry.insert(0, row[11])
 
 # Clear Form
 def clear_form():
@@ -153,6 +154,7 @@ def clear_form():
     item_entry.delete(0, tk.END)
     category_entry.delete(0, tk.END)
     unit_entry.delete(0, tk.END)
+    currency_entry.delete(0, tk.END)
     material_entry.delete(0, tk.END)
     brand_entry.delete(0, tk.END)
     supplier_entry.delete(0, tk.END)
@@ -176,25 +178,21 @@ def open_reference():
     selected = tree.selection()
     if not selected:
         return
-
     idx = int(selected[0])
-    ref = data[idx][9]
-
+    ref = data[idx][10]
     if not ref:
         messagebox.showinfo("No Reference", "No reference assigned.")
         return
-
     if not os.path.exists(ref):
         messagebox.showerror("Error", "Referenced file does not exist.")
         return
-
     os.startfile(ref)
 
 # Copy Reference
 def copy_reference():
     selected = tree.selection()
     if selected:
-        pyperclip.copy(data[int(selected[0])][9] or "")
+        pyperclip.copy(data[int(selected[0])][10] or "")
 
 # Paste Reference
 def paste_reference():
@@ -202,14 +200,11 @@ def paste_reference():
     selected = tree.selection()
     if not selected:
         return
-
     idx = int(selected[0])
     paste_val = pyperclip.paste()
-
     row = list(data[idx])
-    row[9] = paste_val
+    row[10] = paste_val
     data[idx] = tuple(row)
-
     save_data(data)
     render_table()
 
@@ -223,16 +218,13 @@ def show_context_menu(event):
 # Render Table
 def render_table():
     query = search_var.get().lower()
-
     for i in tree.get_children():
         tree.delete(i)
-
     for idx, row in enumerate(data):
         if query in str(row).lower():
             tree.insert("", "end", iid=idx, values=row)
 
 # ================= GUI SETUP =================
-
 root = tk.Tk()
 root.title("Cost Database")
 root.configure(bg="#f0f2f5")
@@ -240,7 +232,7 @@ root.configure(bg="#f0f2f5")
 try:
     root.state("zoomed")
 except:
-    root.geometry("1400x800")
+    root.geometry("1500x850")
 
 # Search Bar
 search_frame = tk.Frame(root, bg="#f0f2f5")
@@ -259,9 +251,11 @@ table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 columns = HEADERS
 tree = ttk.Treeview(table_frame, columns=columns, show="headings")
 
+# Set all column widths equal
+column_width = 120
 for col in columns:
     tree.heading(col, text=col)
-    tree.column(col, width=150 if col in ["Item Description", "Remarks", "Brand", "Supplier"] else 120)
+    tree.column(col, width=column_width)
 
 tree.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
 
@@ -275,7 +269,6 @@ menu = tk.Menu(root, tearoff=0)
 menu.add_command(label="Open Reference", command=open_reference)
 menu.add_command(label="Copy Reference", command=copy_reference)
 menu.add_command(label="Paste Reference", command=paste_reference)
-
 tree.bind("<Button-3>", show_context_menu)
 
 # Form Section
@@ -294,43 +287,47 @@ tk.Label(form_frame, text="Unit").grid(row=1, column=0)
 unit_entry = tk.Entry(form_frame)
 unit_entry.grid(row=1, column=1)
 
-tk.Label(form_frame, text="Bare Price").grid(row=1, column=2)
+tk.Label(form_frame, text="Currency").grid(row=1, column=2)
+currency_entry = tk.Entry(form_frame)
+currency_entry.grid(row=1, column=3)
+
+tk.Label(form_frame, text="Bare Price").grid(row=2, column=0)
 material_entry = tk.Entry(form_frame)
-material_entry.grid(row=1, column=3)
+material_entry.grid(row=2, column=1)
 
-tk.Label(form_frame, text="Brand").grid(row=2, column=0)
+tk.Label(form_frame, text="Brand").grid(row=2, column=2)
 brand_entry = tk.Entry(form_frame)
-brand_entry.grid(row=2, column=1)
+brand_entry.grid(row=2, column=3)
 
-tk.Label(form_frame, text="Supplier").grid(row=2, column=2)
+tk.Label(form_frame, text="Supplier").grid(row=3, column=0)
 supplier_entry = tk.Entry(form_frame)
-supplier_entry.grid(row=2, column=3)
+supplier_entry.grid(row=3, column=1)
 
-tk.Label(form_frame, text="Location").grid(row=3, column=0)
+tk.Label(form_frame, text="Location").grid(row=3, column=2)
 location_entry = tk.Entry(form_frame)
-location_entry.grid(row=3, column=1)
+location_entry.grid(row=3, column=3)
 
-tk.Label(form_frame, text="Date").grid(row=3, column=2)
+tk.Label(form_frame, text="Date").grid(row=4, column=0)
 date_entry = tk.Entry(form_frame)
-date_entry.grid(row=3, column=3)
+date_entry.grid(row=4, column=1)
 date_entry.insert(0, str(date.today()))
 
-tk.Label(form_frame, text="Logged by").grid(row=4, column=0)
+tk.Label(form_frame, text="Logged by").grid(row=4, column=2)
 logged_entry = tk.Entry(form_frame)
-logged_entry.grid(row=4, column=1)
+logged_entry.grid(row=4, column=3)
 
-tk.Label(form_frame, text="Reference").grid(row=4, column=2)
+tk.Label(form_frame, text="Reference").grid(row=5, column=0)
 reference_var = tk.StringVar()
 reference_entry = tk.Entry(form_frame, textvariable=reference_var, width=30)
-reference_entry.grid(row=4, column=3)
-tk.Button(form_frame, text="Browse", command=browse_reference).grid(row=4, column=4, padx=5)
+reference_entry.grid(row=5, column=1)
+tk.Button(form_frame, text="Browse", command=browse_reference).grid(row=5, column=2, padx=5)
 
-tk.Label(form_frame, text="Remarks").grid(row=5, column=0)
+tk.Label(form_frame, text="Remarks").grid(row=5, column=3)
 notes_entry = tk.Entry(form_frame, width=40)
-notes_entry.grid(row=5, column=1, columnspan=3)
+notes_entry.grid(row=5, column=4, columnspan=3)
 
 btn_frame = tk.Frame(form_frame)
-btn_frame.grid(row=6, column=0, columnspan=4, pady=10)
+btn_frame.grid(row=6, column=0, columnspan=6, pady=10)
 
 tk.Button(btn_frame, text="Save", bg="#4CAF50", fg="white", width=12, command=save_item).pack(side=tk.LEFT, padx=5)
 tk.Button(btn_frame, text="Clear", bg="#f0ad4e", fg="white", width=12, command=clear_form).pack(side=tk.LEFT, padx=5)
